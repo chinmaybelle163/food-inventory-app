@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>食材库存盘点</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f4;
+    --card: #ffffff;
+    --green: #4a7c59;
+    --green-light: #e8f2ec;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --text: #2c2c2c;
+    --text-muted: #888;
+    --border: #e8e4de;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 120px;
+  }
+
+  header {
+    background: var(--green);
+    color: white;
+    padding: 28px 20px 24px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(74,124,89,0.3);
+  }
+  header h1 { font-family: 'Noto Serif SC', serif; font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+  header p { font-size: 13px; opacity: 0.85; margin-top: 6px; font-weight: 300; }
+  .header-date { display: inline-block; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px 14px; font-size: 12px; margin-top: 8px; }
+
+  .stats-bar {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .stats-bar .count { color: var(--red); font-weight: 600; font-size: 18px; }
+
+  .section { margin: 16px 14px 0; background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+  .section-header {
+    padding: 14px 18px 12px;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 15px; font-weight: 600; color: var(--green);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    background: var(--green-light);
+  }
+
+  .item-row {
+    display: flex; align-items: center;
+    padding: 0 18px;
+    border-bottom: 1px solid #f5f2ee;
+    transition: background 0.15s;
+    cursor: pointer;
+    min-height: 54px;
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-row:active { background: #f9f6f1; }
+  .item-row.checked { background: var(--red-light); }
+  .item-row.checked .item-name { color: var(--red); font-weight: 500; }
+  .item-row input[type="checkbox"] { display: none; }
+
+  .custom-check {
+    width: 26px; height: 26px; border-radius: 8px;
+    border: 2px solid var(--border); background: white;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; margin-right: 14px;
+  }
+  .item-row.checked .custom-check { background: var(--red); border-color: var(--red); }
+  .custom-check svg { opacity: 0; transform: scale(0.6); transition: all 0.2s; }
+  .item-row.checked .custom-check svg { opacity: 1; transform: scale(1); }
+
+  .item-name { flex: 1; font-size: 15px; color: var(--text); transition: color 0.15s; }
+  .item-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--red-light); color: var(--red); font-weight: 500; opacity: 0; transition: opacity 0.2s; }
+  .item-row.checked .item-tag { opacity: 1; }
+
+  .notes-section { margin: 16px 14px 0; background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+  .notes-header { padding: 14px 18px 12px; font-family: 'Noto Serif SC', serif; font-size: 15px; font-weight: 600; color: #8b6f47; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: #fdf6ed; }
+  .notes-section textarea { width: 100%; padding: 16px 18px; border: none; outline: none; resize: none; font-family: 'Noto Sans SC', sans-serif; font-size: 15px; color: var(--text); background: white; line-height: 1.7; min-height: 100px; }
+  .notes-section textarea::placeholder { color: #bbb; }
+
+  .submit-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 14px 20px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
+  .submit-btn { width: 100%; background: var(--green); color: white; border: none; border-radius: 14px; padding: 17px; font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 600; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+  .submit-btn.has-items { background: var(--red); }
+
+  .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8); background: rgba(30,30,30,0.92); color: white; padding: 20px 32px; border-radius: 16px; font-size: 16px; text-align: center; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 999; backdrop-filter: blur(8px); }
+  .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .toast .emoji { font-size: 32px; display: block; margin-bottom: 8px; }
+
+  .error-toast { background: rgba(192,57,43,0.92); }
+</style>
+</head>
+<body>
+
+<!-- ⚠️ 部署后把下面这行的 URL 改成你的 Worker 地址 -->
+<script>
+  const WORKER_URL = 'https://food-report.chinmaybelle163.workers.dev';
+</script>
+
+<header>
+  <h1>🛒 食材库存盘点</h1>
+  <p>勾选需要购买的食材，提交后自动发送购物清单</p>
+  <div class="header-date" id="headerDate"></div>
+</header>
+
+<div class="stats-bar">
+  <span>已勾选需购买：<span class="count" id="checkedCount">0</span> 种</span>
+  <span style="color: var(--text-muted); font-size: 12px;">共53种食材</span>
+</div>
+
+<div class="section"><div class="section-header">🥩 肉类 / 海鲜</div><div id="items-meat"></div></div>
+<div class="section"><div class="section-header">🥚 蛋类</div><div id="items-egg"></div></div>
+<div class="section"><div class="section-header">🥬 蔬菜 / 菌类</div><div id="items-veg"></div></div>
+<div class="section"><div class="section-header">🌽 根茎 / 薯类</div><div id="items-root"></div></div>
+<div class="section"><div class="section-header">🍎 水果</div><div id="items-fruit"></div></div>
+<div class="section"><div class="section-header">🌾 主食 / 谷物</div><div id="items-grain"></div></div>
+<div class="section"><div class="section-header">🧂 调味料 / 酱料</div><div id="items-spice"></div></div>
+<div class="section"><div class="section-header">🍶 油脂类</div><div id="items-oil"></div></div>
+<div class="section"><div class="section-header">🥛 乳制品 / 其他</div><div id="items-dairy"></div></div>
+
+<div class="notes-section">
+  <div class="notes-header">📝 其他补充</div>
+  <textarea id="extraNotes" placeholder="如有其他需要购买的食材，在这里写上，例如：橙子、豆浆…"></textarea>
+</div>
+
+<div class="submit-bar">
+  <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">
+    <span id="submitText">提交盘点</span>
+  </button>
+</div>
+
+<div class="toast" id="toast">
+  <span class="emoji" id="toastEmoji">✅</span>
+  <div id="toastMsg">提交成功！</div>
+  <div id="toastSub" style="font-size:13px;opacity:0.8;margin-top:4px;"></div>
+</div>
+
+<script>
+const DATA = {
+  meat:  { label: '肉类/海鲜', items: ['猪肉（瘦肉）','牛肉','鸡肉','排骨','三文鱼','虾仁'] },
+  egg:   { label: '蛋类',      items: ['鸡蛋'] },
+  veg:   { label: '蔬菜/菌类', items: ['西蓝花','菠菜','青菜','白菜','生菜','西葫芦','丝瓜','冬瓜','茄子','豆角','莲藕','香菇','洋葱','芹菜','黄瓜'] },
+  root:  { label: '根茎/薯类', items: ['胡萝卜','土豆','山药','南瓜','红薯','紫薯','玉米'] },
+  fruit: { label: '水果',      items: ['苹果','红枣','香蕉','火龙果'] },
+  grain: { label: '主食/谷物', items: ['大米','小米','面条','面粉','淀粉/生粉'] },
+  spice: { label: '调味料/酱料', items: ['生抽酱油','老抽','蚝油','料酒','醋','豆瓣酱','盐','白糖','花椒/八角','姜','蒜','葱'] },
+  oil:   { label: '油脂类',    items: ['食用油（大豆油）'] },
+  dairy: { label: '乳制品/其他', items: ['牛奶','豆腐'] },
+};
+
+// 渲染
+Object.keys(DATA).forEach(cat => {
+  const container = document.getElementById(`items-${cat}`);
+  DATA[cat].items.forEach(name => {
+    const row = document.createElement('label');
+    row.className = 'item-row';
+    row.dataset.name = name;
+    row.dataset.category = DATA[cat].label;
+    row.innerHTML = `
+      <input type="checkbox">
+      <div class="custom-check">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 7l4 4 6-6" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="item-name">${name}</span>
+      <span class="item-tag">需购买</span>
+    `;
+    row.querySelector('input').addEventListener('change', function() {
+      row.classList.toggle('checked', this.checked);
+      updateStats();
+    });
+    container.appendChild(row);
+  });
+});
+
+function updateStats() {
+  const count = document.querySelectorAll('.item-row input:checked').length;
+  document.getElementById('checkedCount').textContent = count;
+  const btn = document.getElementById('submitBtn');
+  const txt = document.getElementById('submitText');
+  if (count > 0) {
+    btn.classList.add('has-items');
+    txt.textContent = `提交盘点（${count}种需购买）`;
+  } else {
+    btn.classList.remove('has-items');
+    txt.textContent = '提交盘点';
+  }
+}
+
+function setDate() {
+  const now = new Date();
+  const days = ['周日','周一','周二','周三','周四','周五','周六'];
+  document.getElementById('headerDate').textContent =
+    `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${days[now.getDay()]}`;
+}
+setDate();
+
+function showToast(emoji, msg, sub, isError) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastEmoji').textContent = emoji;
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastSub').textContent = sub || '';
+  t.className = 'toast' + (isError ? ' error-toast' : '') + ' show';
+  setTimeout(() => t.className = 'toast' + (isError ? ' error-toast' : ''), 3000);
+}
+
+async function handleSubmit() {
+  const notes = document.getElementById('extraNotes').value.trim();
+  const rows = document.querySelectorAll('.item-row');
+
+  const items = [...rows].map(row => ({
+    name: row.dataset.name,
+    category: row.dataset.category,
+    needBuy: row.querySelector('input').checked,
+  }));
+
+  const needBuyCount = items.filter(i => i.needBuy).length;
+  if (needBuyCount === 0 && !notes) {
+    showToast('💡', '还没有勾选任何食材哦', '请勾选需要购买的食材', false);
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  const txt = document.getElementById('submitText');
+  btn.disabled = true;
+  txt.textContent = '提交中…';
+
+  try {
+    const res = await fetch(`${WORKER_URL}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, notes }),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      showToast('✅', '提交成功！', '购物清单已发送到群里');
+      // 清空
+      document.querySelectorAll('.item-row').forEach(r => {
+        r.classList.remove('checked');
+        r.querySelector('input').checked = false;
+      });
+      document.getElementById('extraNotes').value = '';
+      document.getElementById('checkedCount').textContent = '0';
+      btn.classList.remove('has-items');
+      txt.textContent = '提交盘点';
+    } else {
+      showToast('❌', '提交失败', data.error || '请重试', true);
+      txt.textContent = '提交盘点';
+    }
+  } catch (e) {
+    showToast('❌', '网络错误', '请检查网络后重试', true);
+    txt.textContent = '提交盘点';
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
