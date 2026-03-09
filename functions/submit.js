@@ -37,7 +37,32 @@ export async function onRequestPost(context) {
     const dateStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth()+1).padStart(2,'0')}-${String(now.getUTCDate()).padStart(2,'0')}`;
     const dateDisplay = `${now.getUTCFullYear()}年${now.getUTCMonth()+1}月${now.getUTCDate()}日`;
 
-    // 批量写入飞书
+    // 1. 查询所有记录，找出非今天的删掉
+    const existingRes = await fetch(
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${FOOD_TABLE_ID}/records?page_size=500`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const existingData = await existingRes.json();
+    const oldIds = (existingData.data?.items || [])
+      .filter(r => {
+        const d = r.fields['盘点日期'];
+        return typeof d === 'string' ? d !== dateStr : true;
+      })
+      .map(r => r.record_id);
+
+    // 2. 删除非今天的旧记录
+    if (oldIds.length > 0) {
+      await fetch(
+        `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${FOOD_TABLE_ID}/records/batch_delete`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ records: oldIds }),
+        }
+      );
+    }
+
+    // 3. 写入本次新记录
     const records = items.map(item => ({
       fields: {
         '食材名称': item.name,
@@ -64,7 +89,7 @@ export async function onRequestPost(context) {
       });
     }
 
-    // 发购物清单
+    // 4. 发购物清单
     const needBuyItems = items.filter(i => i.needBuy);
     if (needBuyItems.length > 0 || notes) {
       const groups = {};
