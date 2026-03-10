@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>消耗品盘点</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#5c7a6b">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f2ed;
+    --card: #fffdf9;
+    --green: #5c7a6b;
+    --green-light: #e8f0ec;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --text: #2c2c2c;
+    --text-muted: #888;
+    --border: #e8e4dc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    font-family: 'Noto Sans SC', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 100px;
+  }
+  .header {
+    background: var(--green);
+    color: white;
+    padding: 20px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 { font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 600; }
+  .header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+  .header-date {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 12px;
+    margin-top: 6px;
+  }
+  .stats {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-chip { flex: 1; text-align: center; padding: 6px 4px; border-radius: 8px; font-size: 11px; }
+  .stat-chip .num { font-size: 20px; font-weight: 500; display: block; }
+  .stat-chip.green { background: var(--green-light); color: var(--green); }
+  .stat-chip.red { background: var(--red-light); color: var(--red); }
+
+  .category { margin: 12px 12px 0; }
+  .category-title {
+    font-size: 12px; font-weight: 500; color: var(--text-muted);
+    padding: 8px 4px 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .category-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .item-card {
+    background: var(--card);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+    padding: 12px 14px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .item-card.need-buy { border-color: var(--red); background: var(--red-light); }
+
+  .item-info { flex: 1; pointer-events: none; }
+  .item-name { font-size: 14px; font-weight: 500; }
+  .item-area { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .check-box {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: white;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    pointer-events: none;
+    transition: all 0.15s;
+    font-size: 14px;
+  }
+  .item-card.need-buy .check-box {
+    background: var(--red);
+    border-color: var(--red);
+    color: white;
+  }
+
+  .notes-section { margin: 16px 12px 0; }
+  .notes-section textarea {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 13px;
+    background: var(--card);
+    color: var(--text);
+    resize: none;
+    outline: none;
+  }
+  .notes-section textarea:focus { border-color: var(--green); }
+
+  .submit-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 12px 16px;
+    background: white;
+    border-top: 1px solid var(--border);
+  }
+  .submit-btn {
+    width: 100%;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 16px;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .submit-btn:active { opacity: 0.85; }
+  .submit-btn:disabled { opacity: 0.6; }
+
+  .toast {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: rgba(30,30,30,0.92);
+    color: white;
+    padding: 20px 28px;
+    border-radius: 16px;
+    text-align: center;
+    font-size: 15px;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .toast .icon { font-size: 32px; display: block; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧴 消耗品盘点</h1>
+  <p>勾选需要购买的物品，提交后自动发送购物清单</p>
+  <span class="header-date" id="dateDisplay"></span>
+</div>
+
+<div class="stats">
+  <div class="stat-chip green"><span class="num" id="okCount">0</span>充足</div>
+  <div class="stat-chip red"><span class="num" id="buyCount">0</span>需要购买</div>
+</div>
+
+<div id="itemList"></div>
+
+<div class="notes-section">
+  <textarea id="notes" rows="3" placeholder="📝 其他补充（如需备注特定品牌或其他物品）"></textarea>
+</div>
+
+<div class="submit-bar">
+  <button class="submit-btn" id="submitBtn" onclick="submitInventory()">提交盘点</button>
+</div>
+
+<div class="toast" id="toast">
+  <span class="icon" id="toastIcon">✅</span>
+  <span id="toastMsg">提交成功</span>
+</div>
+
+<script>
+const CATEGORIES = [
+  { name: '清洁工具', items: [
+    { code: 'C-01', name: '洗碗布 / 百洁布' },
+    { code: 'C-02', name: '马桶刷' },
+    { code: 'C-05', name: '洗地机滚刷' },
+    { code: 'C-06', name: '洗地机过滤网' },
+  ]},
+  { name: '清洁剂', items: [
+    { code: 'D-01', name: '洗碗液' },
+    { code: 'D-02', name: '马桶清洁剂（洁厕灵）' },
+    { code: 'D-05', name: '地板清洁液（洗地机专用）' },
+    { code: 'D-08', name: '家用消毒液（84/酒精）' },
+    { code: 'D-09', name: '厨房油污清洁喷雾' },
+  ]},
+  { name: '纸品 / 垃圾袋', items: [
+    { code: 'P-01', name: '卷纸（厕纸）' },
+    { code: 'P-02', name: '抽纸 / 面巾纸' },
+    { code: 'P-05', name: '垃圾袋（大号）' },
+    { code: 'P-06', name: '垃圾袋（中号）' },
+    { code: 'P-07', name: '垃圾袋（小号）' },
+    { code: 'P-08', name: '保鲜袋 / 密封袋' },
+    { code: 'P-09', name: '棉柔巾' },
+  ]},
+  { name: '宝宝用品', items: [
+    { code: 'B-01', name: '婴儿湿巾（大包装）' },
+    { code: 'B-07', name: '奶瓶清洗剂' },
+  ]},
+  { name: '个人护理', items: [
+    { code: 'W-01', name: '洗手液' },
+  ]},
+  { name: '洗衣用品', items: [
+    { code: 'L-01', name: '洗衣液' },
+    { code: 'L-04', name: '洗衣机槽清洁剂' },
+    { code: 'L-05', name: '衣物消毒液' },
+  ]},
+];
+
+const state = {};
+CATEGORIES.forEach(cat => cat.items.forEach(item => { state[item.code] = false; }));
+
+function updateStats() {
+  const total = Object.keys(state).length;
+  const buyCount = Object.values(state).filter(v => v).length;
+  document.getElementById('okCount').textContent = total - buyCount;
+  document.getElementById('buyCount').textContent = buyCount;
+}
+
+function toggleItem(code) {
+  state[code] = !state[code];
+  const card = document.getElementById('card-' + code);
+  const box = document.getElementById('box-' + code);
+  if (state[code]) {
+    card.classList.add('need-buy');
+    box.textContent = '✓';
+  } else {
+    card.classList.remove('need-buy');
+    box.textContent = '';
+  }
+  updateStats();
+}
+
+function render() {
+  const now = new Date(Date.now() + 8 * 3600000);
+  const y = now.getUTCFullYear(), m = now.getUTCMonth()+1, d = now.getUTCDate();
+  const weekdays = ['日','一','二','三','四','五','六'];
+  document.getElementById('dateDisplay').textContent = `${y}年${m}月${d}日 周${weekdays[now.getUTCDay()]}`;
+
+  const container = document.getElementById('itemList');
+  container.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const div = document.createElement('div');
+    div.className = 'category';
+    div.innerHTML = `<div class="category-title">${cat.name}</div>`;
+    cat.items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.id = 'card-' + item.code;
+      card.onclick = () => toggleItem(item.code);
+      card.innerHTML = `
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+        </div>
+        <div class="check-box" id="box-${item.code}"></div>
+      `;
+      div.appendChild(card);
+    });
+    container.appendChild(div);
+  });
+  updateStats();
+}
+
+function showToast(icon, msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function submitInventory() {
+  const btn = document.getElementById('submitBtn');
+  btn.textContent = '提交中...';
+  btn.disabled = true;
+
+  const items = [];
+  CATEGORIES.forEach(cat => {
+    cat.items.forEach(item => {
+      items.push({ code: item.code, name: item.name, category: cat.name, needBuy: state[item.code] });
+    });
+  });
+  const notes = document.getElementById('notes').value.trim();
+
+  try {
+    const res = await fetch('/submit-supplies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, notes }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('✅', '提交成功！');
+    } else {
+      showToast('❌', data.error || '提交失败');
+    }
+  } catch (e) {
+    showToast('❌', '网络错误，请重试');
+  }
+
+  btn.textContent = '提交盘点';
+  btn.disabled = false;
+}
+
+render();
+</script>
+</body>
+</html>
