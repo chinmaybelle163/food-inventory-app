@@ -29,7 +29,6 @@
     min-height: 100vh;
     padding-bottom: 120px;
   }
-
   header {
     background: var(--green);
     color: white;
@@ -43,7 +42,6 @@
   header h1 { font-family: 'Noto Serif SC', serif; font-size: 22px; font-weight: 700; letter-spacing: 2px; }
   header p { font-size: 13px; opacity: 0.85; margin-top: 6px; font-weight: 300; }
   .header-date { display: inline-block; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px 14px; font-size: 12px; margin-top: 8px; }
-
   .stats-bar {
     background: white;
     border-bottom: 1px solid var(--border);
@@ -55,7 +53,6 @@
     color: var(--text-muted);
   }
   .stats-bar .count { color: var(--red); font-weight: 600; font-size: 18px; }
-
   .section { margin: 16px 14px 0; background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
   .section-header {
     padding: 14px 18px 12px;
@@ -65,7 +62,6 @@
     display: flex; align-items: center; gap: 8px;
     background: var(--green-light);
   }
-
   .item-row {
     display: flex; align-items: center;
     padding: 0 18px;
@@ -79,7 +75,6 @@
   .item-row.checked { background: var(--red-light); }
   .item-row.checked .item-name { color: var(--red); font-weight: 500; }
   .item-row input[type="checkbox"] { display: none; }
-
   .custom-check {
     width: 26px; height: 26px; border-radius: 8px;
     border: 2px solid var(--border); background: white;
@@ -89,32 +84,26 @@
   .item-row.checked .custom-check { background: var(--red); border-color: var(--red); }
   .custom-check svg { opacity: 0; transform: scale(0.6); transition: all 0.2s; }
   .item-row.checked .custom-check svg { opacity: 1; transform: scale(1); }
-
   .item-name { flex: 1; font-size: 15px; color: var(--text); transition: color 0.15s; }
   .item-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--red-light); color: var(--red); font-weight: 500; opacity: 0; transition: opacity 0.2s; }
   .item-row.checked .item-tag { opacity: 1; }
-
   .notes-section { margin: 16px 14px 0; background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
   .notes-header { padding: 14px 18px 12px; font-family: 'Noto Serif SC', serif; font-size: 15px; font-weight: 600; color: #8b6f47; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: #fdf6ed; }
   .notes-section textarea { width: 100%; padding: 16px 18px; border: none; outline: none; resize: none; font-family: 'Noto Sans SC', sans-serif; font-size: 15px; color: var(--text); background: white; line-height: 1.7; min-height: 100px; }
   .notes-section textarea::placeholder { color: #bbb; }
-
   .submit-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 14px 20px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
   .submit-btn { width: 100%; background: var(--green); color: white; border: none; border-radius: 14px; padding: 17px; font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 600; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .submit-btn:active { transform: scale(0.98); }
   .submit-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
   .submit-btn.has-items { background: var(--red); }
-
   .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8); background: rgba(30,30,30,0.92); color: white; padding: 20px 32px; border-radius: 16px; font-size: 16px; text-align: center; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 999; backdrop-filter: blur(8px); }
   .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   .toast .emoji { font-size: 32px; display: block; margin-bottom: 8px; }
-
   .error-toast { background: rgba(192,57,43,0.92); }
 </style>
 </head>
 <body>
 
-<!-- ⚠️ 部署后把下面这行的 URL 改成你的 Worker 地址 -->
 <script>
   const WORKER_URL = '';
 </script>
@@ -170,7 +159,6 @@ const DATA = {
   dairy: { label: '乳制品/其他', items: ['牛奶','豆腐'] },
 };
 
-// 渲染
 Object.keys(DATA).forEach(cat => {
   const container = document.getElementById(`items-${cat}`);
   DATA[cat].items.forEach(name => {
@@ -249,7 +237,7 @@ async function handleSubmit() {
   txt.textContent = '提交中…';
 
   try {
-    const res = await fetch(`${WORKER_URL}/submit`, {
+    const res = await fetch('/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items, notes }),
@@ -258,7 +246,6 @@ async function handleSubmit() {
 
     if (data.ok) {
       showToast('✅', '提交成功！', '购物清单已发送到群里');
-      // 清空
       document.querySelectorAll('.item-row').forEach(r => {
         r.classList.remove('checked');
         r.querySelector('input').checked = false;
